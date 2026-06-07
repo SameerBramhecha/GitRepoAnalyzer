@@ -56,7 +56,7 @@ jobs:
       - name: Run analysis
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Add COPILOT_TOKEN if you have a separate Copilot service token
+          COPILOT_GITHUB_TOKEN: ${{ secrets.TARGET_REPO_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           # Allow overriding the target repo via the `repo` input; fall back to the current repo
           repo="${{ inputs.repo }}"
