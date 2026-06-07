@@ -5,16 +5,16 @@ on:
   schedule:
     - cron: '0 8 * * 1'
 
-  # Or trigger it manually from the Actions tab
+  # Trigger manually from the Actions tab
   workflow_dispatch:
     inputs:
       repo:
-        description: 'Full repo URL or owner/repo to analyze (defaults to this repo)'
+        description: 'Repo to analyze — full URL or owner/repo (blank = this repo)'
         required: false
         type: string
         default: ''
       instructions:
-        description: Which instruction set to use
+        description: 'Instruction set to use'
         required: false
         default: default
         type: choice
@@ -22,18 +22,27 @@ on:
           - default
           - security
 
+permissions:
+  contents: read   # checkout only — no push needed
+  actions: write   # required to upload artifacts
+
+env:
+  DOTNET_VERSION: '8.0.x'   # must match <TargetFramework> in .csproj
+
 jobs:
   analyze:
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: read
-
     steps:
-      - name: Setup .NET 10
+      # ── 1. Checkout FIRST so hashFiles works correctly ────────────────────
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── 2. .NET setup + NuGet cache ───────────────────────────────────────
+      - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
       - name: Cache NuGet packages
         uses: actions/cache@v4
@@ -43,37 +52,67 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Restore dependencies
-        run: dotnet restore
-
+      # ── 3. Build ──────────────────────────────────────────────────────────
       - name: Publish RepoAnalyzer
-        run: |
-          dotnet publish -c Release -o out
+        run: dotnet publish -c Release -o out
 
-      - name: Run analysis
-        env:
-          COPILOT_GITHUB_TOKEN: ${{ secrets.TARGET_REPO_TOKEN || secrets.GITHUB_TOKEN }}
+      # ── 4. Resolve target repo ────────────────────────────────────────────
+      - name: Resolve target repo URL
+        id: target
         run: |
-          # Allow overriding the target repo via the `repo` input; fall back to the current repo
           repo="${{ inputs.repo }}"
           if [ -z "$repo" ]; then
             repo="${{ github.server_url }}/${{ github.repository }}"
+          elif [[ "$repo" != http* ]]; then
+            # Accept shorthand  owner/repo  and expand it
+            repo="${{ github.server_url }}/$repo"
           fi
+          echo "url=$repo" >> "$GITHUB_OUTPUT"
 
-          # Run the published analyzer from this repository (--dry-run to skip git operations)
-          dotnet out/repo-analyzer.dll "$repo" \
-            --instructions "${{ inputs.instructions || 'default' }}.json" \
+      # ── 5. Run analysis (dry-run: writes reports locally, no git push) ────
+      - name: Run analysis
+        env:
+          # Falls back to the built-in GITHUB_TOKEN when TARGET_REPO_TOKEN is absent
+          GH_TOKEN: ${{ secrets.TARGET_REPO_TOKEN || secrets.GITHUB_TOKEN }}
+        run: |
+          set=${{ inputs.instructions || 'default' }}
+
+          dotnet out/repo-analyzer.dll "${{ steps.target.outputs.url }}" \
+            --instructions "instructions/${set}.json" \
             --output reports \
-            --copilot-token "$COPILOT_GITHUB_TOKEN" \
+            --token "$GH_TOKEN" \
             --dry-run
 
+      # ── 6. Emit a job summary ─────────────────────────────────────────────
+      - name: Write job summary
+        if: always()
+        run: |
+          set=${{ inputs.instructions || 'default' }}
+          report="reports/$(jq -r .reportFileName instructions/${set}.json 2>/dev/null || echo 'analysis-report.md')"
+
+          echo "## 📊 Analysis report — \`${set}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "| | |" >> "$GITHUB_STEP_SUMMARY"
+          echo "|---|---|" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Target** | ${{ steps.target.outputs.url }} |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| **Triggered by** | \`${{ github.event_name }}\` |" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          if [ -f "$report" ]; then
+            echo "### Preview" >> "$GITHUB_STEP_SUMMARY"
+            echo "" >> "$GITHUB_STEP_SUMMARY"
+            # Skip the 8-line metadata header, show the next 40 lines
+            tail -n +9 "$report" | head -40 >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "⚠️ Report file not found — check the Run analysis step logs." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # ── 7. Upload reports as artifacts ────────────────────────────────────
       - name: Upload analysis report
-        if: always() && hashFiles('reports/**') != ''
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: analysis-report
+          name: analysis-report-${{ inputs.instructions || 'default' }}-${{ github.run_number }}
           path: reports/
           retention-days: 30
+          if-no-files-found: warn
