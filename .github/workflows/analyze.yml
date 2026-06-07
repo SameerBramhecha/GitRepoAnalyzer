@@ -43,11 +43,11 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
-      - name: Restore dependencies
-        run: dotnet restore
-
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Restore dependencies
+        run: dotnet restore
 
       - name: Publish RepoAnalyzer
         run: |
