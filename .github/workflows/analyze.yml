@@ -78,7 +78,7 @@ jobs:
           set=${{ inputs.instructions || 'default' }}
 
           dotnet out/repo-analyzer.dll "${{ steps.target.outputs.url }}" \
-            --instructions "instructions/${set}.json" \
+            --instructions "${set}.json" \
             --output reports \
             --token "$GH_TOKEN" \
             --dry-run
