@@ -35,8 +35,23 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      - name: Install RepoAnalyzer
-        run: dotnet tool install --global repo-analyzer
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Publish RepoAnalyzer
+        run: |
+          dotnet publish -c Release -o out
 
       - name: Run analysis
         env:
@@ -55,7 +70,8 @@ jobs:
             token="$GITHUB_TOKEN"
           fi
 
-          repo-analyzer "$repo" \
+          # Run the published analyzer from this repository
+          dotnet out/repo-analyzer.dll "$repo" \
             --instructions "instructions/${{ inputs.instructions || 'default' }}.json" \
             --output reports \
             --token "$token"
