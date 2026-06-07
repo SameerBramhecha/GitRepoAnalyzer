@@ -1,0 +1,27 @@
+{
+  "name": "Security Audit",
+  "model": "gpt-5",
+  "baseSystemPrompt": "You are a security expert specializing in code review and threat modeling. Focus exclusively on security risks. Be direct, specific, and severity-rated. Every finding must include the file path and, where possible, the line number.",
+  "checks": [
+    "Injection vulnerabilities: SQL, command, LDAP, XPath, template injection",
+    "Authentication & authorisation flaws: missing auth, privilege escalation, insecure JWTs",
+    "Sensitive data exposure: hardcoded secrets, API keys, passwords, PII in logs",
+    "Insecure dependencies: outdated packages with known CVEs (check package-lock.json / go.sum / requirements.txt)",
+    "Cross-site scripting (XSS): reflected, stored, DOM-based",
+    "Insecure deserialization: untrusted data passed to deserializers",
+    "Broken access control: IDOR, missing ownership checks, path traversal",
+    "Security misconfiguration: overly permissive CORS, missing security headers, debug modes in production",
+    "Cryptographic failures: weak algorithms, insecure random, improper key storage",
+    "SSRF & open redirect vulnerabilities"
+  ],
+  "outputSections": [
+    "Risk summary (one-paragraph overview)",
+    "Critical findings (CVSS ≥ 9.0)",
+    "High findings (CVSS 7.0–8.9)",
+    "Medium findings (CVSS 4.0–6.9)",
+    "Low / informational findings",
+    "Remediation roadmap (ordered by severity)"
+  ],
+  "reportFormat": "markdown",
+  "reportFileName": "security-audit.md"
+}

@@ -1,0 +1,26 @@
+{
+  "name": "General Code Quality Analysis",
+  "model": "gpt-5-mini",
+  "checks": [
+    "Architecture and design pattern choices — are they appropriate for the problem?",
+    "Code quality: readability, complexity, duplication, naming conventions",
+    "Security: hardcoded secrets, injection risks, unsafe dependencies",
+    "Test coverage: are tests present, meaningful, and well-structured?",
+    "Documentation: README completeness, inline comments, API docs",
+    "Dependency hygiene: outdated packages, unused dependencies, known CVEs",
+    "Error handling: are errors caught, logged, and surfaced correctly?",
+    "Performance: obvious bottlenecks, N+1 queries, unnecessary allocations"
+  ],
+  "outputSections": [
+    "Executive summary",
+    "Architecture overview",
+    "Code quality findings",
+    "Security assessment",
+    "Test coverage",
+    "Documentation review",
+    "Dependencies",
+    "Top 5 recommendations (prioritised)"
+  ],
+  "reportFormat": "markdown",
+  "reportFileName": "analysis-report.md"
+}

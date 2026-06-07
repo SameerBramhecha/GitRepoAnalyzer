@@ -1,0 +1,33 @@
+# Ignore build outputs
+bin/
+obj/
+.vs/
+
+# Rider/IDE files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Copilot CLI artifacts and large binaries
+copilot-cli/
+**/copilot-cli/
+**/copilot.tgz
+**/copilot.exe
+
+# NuGet
+*.nupkg
+packages/
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+
+# Reports directory (optional)
+reports/
