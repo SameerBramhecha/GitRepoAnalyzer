@@ -93,6 +93,8 @@ Bundled instruction sets:
 
 The repository includes a workflow at `.github/workflows/analyze.yml` that can run the analyzer on demand or on a schedule.
 
+**⚠️ Important: Before running the workflow, set up Copilot authentication** — see [SETUP_COPILOT_TOKEN.md](SETUP_COPILOT_TOKEN.md) for step-by-step instructions. The workflow requires a fine-grained PAT with **Copilot Requests** permission set as the `TARGET_REPO_TOKEN` repository secret.
+
 Using the workflow from this repo
 
 - To run analysis against this repository, open the **Actions** tab, choose the **Repo analysis** workflow and click **Run workflow**. Choose the instruction set (default or security) and run.
@@ -114,19 +116,11 @@ gh workflow run "Repo analysis" --ref main \
 ```
 
 Notes and permissions
-- The workflow now publishes this repository and runs `dotnet out/repo-analyzer.dll` rather than installing a global `repo-analyzer` tool.
-- Copilot CLI authentication: The workflow sets `COPILOT_GITHUB_TOKEN` environment variable (from `TARGET_REPO_TOKEN` or `GITHUB_TOKEN`), which the Copilot CLI reads automatically. For CI/CD, use environment variables instead of interactive login.
-- To allow the action to push into a different repository you must supply `TARGET_REPO_TOKEN` with appropriate permissions for the target. Without a token that has push rights, the analyzer will still run and produce `reports/` inside the job, but pushing back to the target will fail.
+- The workflow publishes this repository and runs `dotnet out/repo-analyzer.dll` rather than using a global tool.
+- **Copilot authentication** is handled via environment variable `COPILOT_GITHUB_TOKEN` (set from `TARGET_REPO_TOKEN` or `GITHUB_TOKEN`).
+- **To push reports to target repos**, ensure your PAT has `repo` scope (read and write).
+- **Do not use `GITHUB_TOKEN` for Copilot** — GitHub's automatic token lacks Copilot permissions. Always set `TARGET_REPO_TOKEN` with a fine-grained PAT as shown in [SETUP_COPILOT_TOKEN.md](SETUP_COPILOT_TOKEN.md).
 
-Example: set the target repo secret with GitHub CLI
-
-```bash
-gh secret set TARGET_REPO_TOKEN --body "$YOUR_PAT" --repo SameerBramhecha/GitRepoAnalyzer
-```
-
-Ensure your PAT has:
-- `repo` scope (for pushing reports to target repos)
-- `read:user` permission (for Copilot Requests in account settings)
 
 Advanced: trigger via API
 
