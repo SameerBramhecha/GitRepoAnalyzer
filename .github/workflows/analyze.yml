@@ -74,4 +74,5 @@ jobs:
           dotnet out/repo-analyzer.dll "$repo" \
             --instructions "${{ inputs.instructions || 'default' }}.json" \
             --output reports \
-            --token "$token"
+            --token "$token" \
+            --copilot-token "$token"

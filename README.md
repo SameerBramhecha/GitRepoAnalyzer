@@ -102,6 +102,7 @@ Using the workflow from this repo
   - `owner/repo`
 
 - If you want the workflow to push the generated report into the *target* repository, you must provide a personal access token (PAT) that has write access to the target repo. Add that PAT as a repository secret named `TARGET_REPO_TOKEN` in *this* repo (Settings → Secrets → Actions). The workflow will prefer `TARGET_REPO_TOKEN` and fall back to the default `GITHUB_TOKEN`.
+- Note: `GITHUB_TOKEN` is not sufficient for Copilot SDK authentication in GitHub Actions. Provide a user PAT or Copilot token with access to Copilot APIs via `TARGET_REPO_TOKEN` or `COPILOT_TOKEN`.
 
 Run the workflow from the Actions UI or use the GitHub CLI:
 
@@ -113,8 +114,15 @@ gh workflow run "Repo analysis" --ref main \
 ```
 
 Notes and permissions
-- The workflow installs the `repo-analyzer` dotnet tool and invokes it against the `repo` input (or defaults to this repo when `repo` is not provided).
+- The workflow now publishes this repository and runs `dotnet out/repo-analyzer.dll` rather than installing a global `repo-analyzer` tool.
 - To allow the action to push into a different repository you must supply `TARGET_REPO_TOKEN` with appropriate permissions for the target. Without a token that has push rights, the analyzer will still run and produce `reports/` inside the job, but pushing back to the target will fail.
+- If the workflow will also authenticate Copilot, store a token in `COPILOT_TOKEN` or re-use `TARGET_REPO_TOKEN` if it has the required Copilot access.
+
+Example: set the target repo secret with GitHub CLI
+
+```bash
+gh secret set TARGET_REPO_TOKEN --body "$TARGET_REPO_TOKEN" --repo SameerBramhecha/GitRepoAnalyzer
+```
 
 Advanced: trigger via API
 

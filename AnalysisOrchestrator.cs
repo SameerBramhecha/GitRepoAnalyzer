@@ -14,7 +14,7 @@ namespace RepoAnalyzer.Core;
 ///   6. Commit and push (unless --dry-run)
 ///   7. Clean up the temp clone
 /// </summary>
-public class AnalysisOrchestrator(string? githubToken)
+public class AnalysisOrchestrator(string? githubToken, string? copilotToken)
 {
     public async Task RunAsync(AnalysisOptions options)
     {
@@ -77,8 +77,8 @@ public class AnalysisOrchestrator(string? githubToken)
     {
         await using var client = new CopilotClient(new CopilotClientOptions
         {
-            GitHubToken      = githubToken,
-            WorkingDirectory = repoPath,   // SDK runtime process runs inside the clone
+            GitHubToken      = copilotToken ?? githubToken,
+            WorkingDirectory = repoPath,
         });
 
         await client.StartAsync();
@@ -87,18 +87,7 @@ public class AnalysisOrchestrator(string? githubToken)
         var content = new System.Text.StringBuilder();
         var done    = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        await using var session = await client.CreateSessionAsync(new SessionConfig
-        {
-            Model     = model,
-            Streaming = true,
-            SystemMessage = new SystemMessageConfig
-            {
-                Mode    = SystemMessageMode.Append,
-                Content = instructions.BuildSystemMessage(),
-            },
-            Tools              = RepoTools.Create(repoPath).Cast<AIFunctionDeclaration>().ToList(),
-            OnPermissionRequest = PermissionHandler.ApproveAll,  // read-only tools — no risk
-        });
+        await using var session = await CreateCopilotSessionAsync(client, repoPath, instructions);
 
         session.On<SessionEvent>(evt =>
         {
@@ -144,6 +133,31 @@ public class AnalysisOrchestrator(string? githubToken)
             InstructionSetName = instructions.Name,
             ModelUsed          = model,
         };
+    }
+
+    private async Task<CopilotSession> CreateCopilotSessionAsync(CopilotClient client, string repoPath, InstructionSet instructions)
+    {
+        try
+        {
+            return await client.CreateSessionAsync(new SessionConfig
+            {
+                Model     = instructions.Model ?? "gpt-5",
+                Streaming = true,
+                SystemMessage = new SystemMessageConfig
+                {
+                    Mode    = SystemMessageMode.Append,
+                    Content = instructions.BuildSystemMessage(),
+                },
+                Tools              = RepoTools.Create(repoPath).Cast<AIFunctionDeclaration>().ToList(),
+                OnPermissionRequest = PermissionHandler.ApproveAll,  // read-only tools — no risk
+            });
+        }
+        catch (Exception ex) when (ex.Message?.Contains("Authentication failed") == true)
+        {
+            throw new InvalidOperationException(
+                "Copilot authentication failed. In GitHub Actions, GITHUB_TOKEN is not sufficient for Copilot SDK authentication. " +
+                "Provide a user personal access token or Copilot token via TARGET_REPO_TOKEN/COPILOT_TOKEN.", ex);
+        }
     }
 
     // ── Repo tree helper ───────────────────────────────────────────────────
