@@ -14,10 +14,7 @@ The `GitRepoAnalyzer` workflow requires a personal access token (PAT) with Copil
 
 3. **Grant required permissions** under **Account permissions**:
    - ✅ **Copilot Requests** (required for Copilot SDK)
-   - ✅ **Read user** (required for user identification)
-
-4. Optionally under **Repository permissions** for pushing reports:
-   - ✅ **Contents** (for pushing analysis reports back to repos)
+   - ✅ **Read user** (recommended for user identification)
 
 5. Click **Generate token** and copy the resulting token (format: `github_pat_...`)
 
@@ -72,10 +69,10 @@ Monitor the run. If successful, you'll see:
 - Check that the token hasn't expired
 
 **Error: "Cannot push to target repo"**
-- Ensure the PAT has **Contents** permission (Repository permissions)
-- Verify you have push access to the target repository
+- The workflow uses `--dry-run` and stores reports as artifacts, so this error should not occur.
+- Reports are always available for download from the GitHub Actions run details.
 
 **Token permissions reference:**
 - `COPILOT_GITHUB_TOKEN` env var is set in workflow from `TARGET_REPO_TOKEN`
 - The C# code receives this via `--copilot-token` argument
-- If `TARGET_REPO_TOKEN` is not set, workflow falls back to `GITHUB_TOKEN` (which lacks Copilot permissions)
+- Since the workflow uses `--dry-run` and stores reports as artifacts, your PAT only needs Copilot permissions—not repository write access

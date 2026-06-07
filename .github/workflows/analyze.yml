@@ -27,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
 
     permissions:
-      contents: write   # needed to push the report back into the repo
+      contents: read
 
     steps:
       - name: Setup .NET 10
@@ -55,7 +55,6 @@ jobs:
 
       - name: Run analysis
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COPILOT_GITHUB_TOKEN: ${{ secrets.TARGET_REPO_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           # Allow overriding the target repo via the `repo` input; fall back to the current repo
@@ -64,15 +63,17 @@ jobs:
             repo="${{ github.server_url }}/${{ github.repository }}"
           fi
 
-          # Prefer a PAT stored in `TARGET_REPO_TOKEN` for pushing into other repos.
-          token="${{ secrets.TARGET_REPO_TOKEN }}"
-          if [ -z "$token" ]; then
-            token="$GITHUB_TOKEN"
-          fi
-
-          # Run the published analyzer from this repository
+          # Run the published analyzer from this repository (--dry-run to skip git operations)
           dotnet out/repo-analyzer.dll "$repo" \
             --instructions "${{ inputs.instructions || 'default' }}.json" \
             --output reports \
-            --token "$token" \
-            --copilot-token "$token"
+            --copilot-token "$COPILOT_GITHUB_TOKEN" \
+            --dry-run
+
+      - name: Upload analysis report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: analysis-report
+          path: reports/
+          retention-days: 30

@@ -91,19 +91,19 @@ Bundled instruction sets:
 
 ## GitHub Actions
 
-The repository includes a workflow at `.github/workflows/analyze.yml` that can run the analyzer on demand or on a schedule.
+The repository includes a workflow at `.github/workflows/analyze.yml` that analyzes a repository and stores the report as a GitHub Actions artifact (retained for 30 days).
 
-**⚠️ Important: Before running the workflow, set up Copilot authentication** — see [SETUP_COPILOT_TOKEN.md](SETUP_COPILOT_TOKEN.md) for step-by-step instructions. The workflow requires a fine-grained PAT with **Copilot Requests** permission set as the `TARGET_REPO_TOKEN` repository secret.
+**⚠️ Important: Before running the workflow, set up Copilot authentication** — see [SETUP_COPILOT_TOKEN.md](SETUP_COPILOT_TOKEN.md) for step-by-step instructions. The workflow requires a fine-grained PAT with **Copilot Requests** permission.
 
 Using the workflow from this repo
 
 - To run analysis against this repository, open the **Actions** tab, choose the **Repo analysis** workflow and click **Run workflow**. Choose the instruction set (default or security) and run.
 
-- To analyze a different repository (and optionally push the report back into that repo), the workflow accepts a `repo` input (full URL or `owner/repo`). Example values:
+- To analyze a different repository, the workflow accepts a `repo` input (full URL or `owner/repo`). Example values:
   - `https://github.com/owner/repo`
   - `owner/repo`
 
-- If you want the workflow to push the generated report into the *target* repository, you must provide a personal access token (PAT) that has write access to the target repo. Add that PAT as a repository secret named `TARGET_REPO_TOKEN` in *this* repo (Settings → Secrets → Actions). The workflow will prefer `TARGET_REPO_TOKEN` and fall back to the default `GITHUB_TOKEN`.
+- The workflow **does not modify the target repository** — it only generates a report and uploads it as a GitHub Actions artifact. The artifact is retained for 30 days and can be downloaded from the Actions run details.
 - Note: `GITHUB_TOKEN` is not sufficient for Copilot SDK authentication in GitHub Actions. Provide a user PAT or Copilot token with access to Copilot APIs via `TARGET_REPO_TOKEN` or `COPILOT_TOKEN`.
 
 Run the workflow from the Actions UI or use the GitHub CLI:
@@ -116,9 +116,9 @@ gh workflow run "Repo analysis" --ref main \
 ```
 
 Notes and permissions
-- The workflow publishes this repository and runs `dotnet out/repo-analyzer.dll` rather than using a global tool.
+- The workflow publishes this repository and runs `dotnet out/repo-analyzer.dll` with `--dry-run` to skip git operations.
 - **Copilot authentication** is handled via environment variable `COPILOT_GITHUB_TOKEN` (set from `TARGET_REPO_TOKEN` or `GITHUB_TOKEN`).
-- **To push reports to target repos**, ensure your PAT has `repo` scope (read and write).
+- Reports are uploaded as GitHub Actions artifacts (30-day retention). Download them from the Actions run details.
 - **Do not use `GITHUB_TOKEN` for Copilot** — GitHub's automatic token lacks Copilot permissions. Always set `TARGET_REPO_TOKEN` with a fine-grained PAT as shown in [SETUP_COPILOT_TOKEN.md](SETUP_COPILOT_TOKEN.md).
 
 
