@@ -8,6 +8,11 @@ on:
   # Or trigger it manually from the Actions tab
   workflow_dispatch:
     inputs:
+      repo:
+        description: 'Full repo URL or owner/repo to analyze (defaults to this repo)'
+        required: false
+        type: string
+        default: ''
       instructions:
         description: Which instruction set to use
         required: false
@@ -38,7 +43,19 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # Add COPILOT_TOKEN if you have a separate Copilot service token
         run: |
-          repo-analyzer ${{ github.server_url }}/${{ github.repository }} \
-            --instructions instructions/${{ inputs.instructions || 'default' }}.json \
+          # Allow overriding the target repo via the `repo` input; fall back to the current repo
+          repo="${{ inputs.repo }}"
+          if [ -z "$repo" ]; then
+            repo="${{ github.server_url }}/${{ github.repository }}"
+          fi
+
+          # Prefer a PAT stored in `TARGET_REPO_TOKEN` for pushing into other repos.
+          token="${{ secrets.TARGET_REPO_TOKEN }}"
+          if [ -z "$token" ]; then
+            token="$GITHUB_TOKEN"
+          fi
+
+          repo-analyzer "$repo" \
+            --instructions "instructions/${{ inputs.instructions || 'default' }}.json" \
             --output reports \
-            --token "$GITHUB_TOKEN"
+            --token "$token"

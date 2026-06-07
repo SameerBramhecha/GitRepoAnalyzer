@@ -91,19 +91,53 @@ Bundled instruction sets:
 
 ## GitHub Actions
 
-Copy `.github/workflows/analyze.yml` into your target repo to run analysis automatically every Monday or on demand via the **Actions** tab.
+The repository includes a workflow at `.github/workflows/analyze.yml` that can run the analyzer on demand or on a schedule.
 
-```yaml
-- name: Run analysis
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  run: |
-    repo-analyzer ${{ github.server_url }}/${{ github.repository }} \
-      --instructions instructions/security.json \
-      --output reports
+Using the workflow from this repo
+
+- To run analysis against this repository, open the **Actions** tab, choose the **Repo analysis** workflow and click **Run workflow**. Choose the instruction set (default or security) and run.
+
+- To analyze a different repository (and optionally push the report back into that repo), the workflow accepts a `repo` input (full URL or `owner/repo`). Example values:
+  - `https://github.com/owner/repo`
+  - `owner/repo`
+
+- If you want the workflow to push the generated report into the *target* repository, you must provide a personal access token (PAT) that has write access to the target repo. Add that PAT as a repository secret named `TARGET_REPO_TOKEN` in *this* repo (Settings → Secrets → Actions). The workflow will prefer `TARGET_REPO_TOKEN` and fall back to the default `GITHUB_TOKEN`.
+
+Run the workflow from the Actions UI or use the GitHub CLI:
+
+```bash
+# Run the workflow from this repo's default branch and analyze another repo
+gh workflow run "Repo analysis" --ref main \
+  --field repo="https://github.com/owner/repo" \
+  --field instructions=security
 ```
 
-The workflow uses `permissions: contents: write` so `GITHUB_TOKEN` can push the report back.
+Notes and permissions
+- The workflow installs the `repo-analyzer` dotnet tool and invokes it against the `repo` input (or defaults to this repo when `repo` is not provided).
+- To allow the action to push into a different repository you must supply `TARGET_REPO_TOKEN` with appropriate permissions for the target. Without a token that has push rights, the analyzer will still run and produce `reports/` inside the job, but pushing back to the target will fail.
+
+Advanced: trigger via API
+
+You can also call the workflow dispatch endpoint directly. Example (replace placeholders):
+
+```bash
+curl -X POST \
+  -H "Accept: application/vnd.github+json" \
+  -H "Authorization: Bearer <YOUR_TOKEN>" \
+  https://api.github.com/repos/<owner>/<repo>/actions/workflows/analyze.yml/dispatches \
+  -d '{"ref":"main","inputs":{"repo":"https://github.com/owner/target","instructions":"default"}}'
+```
+
+Local testing
+
+You can also run the analyzer locally (fast feedback):
+
+```bash
+dotnet tool install --global repo-analyzer
+repo-analyzer https://github.com/owner/repo --instructions instructions/security.json --dry-run
+```
+
+The `--dry-run` flag prevents commits/pushes and is useful for testing.
 
 ## Custom tools available to Copilot
 
