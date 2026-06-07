@@ -79,7 +79,7 @@ jobs:
 
           dotnet out/repo-analyzer.dll "${{ steps.target.outputs.url }}" \
             --instructions "${set}.json" \
-            --output reports \
+            --output "$GITHUB_WORKSPACE/reports" \
             --token "$GH_TOKEN" \
             --dry-run
 

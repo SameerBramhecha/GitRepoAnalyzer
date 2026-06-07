@@ -12,7 +12,9 @@ public static class ReportWriter
         InstructionSet instructions,
         AnalysisOptions options)
     {
-        var outputDir = Path.Combine(repoPath, options.OutputDirectory);
+var outputDir = Path.IsPathRooted(options.OutputDirectory)
+    ? options.OutputDirectory
+    : Path.Combine(repoPath, options.OutputDirectory);
         Directory.CreateDirectory(outputDir);
 
         // Write the main analysis report
